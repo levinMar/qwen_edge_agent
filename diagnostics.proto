@@ -1,0 +1,48 @@
+syntax = "proto3";
+package mirihi.diagnostics;
+
+enum Status {
+  UNKNOWN          = 0;
+  HEALTHY          = 1;
+  ANOMALY_DETECTED = 2;
+}
+
+enum Severity {
+  NONE   = 0; 
+  LOW    = 1;
+  MEDIUM = 2;
+  HIGH   = 3;
+}
+
+enum IssueType {
+  ISSUE_UNKNOWN       = 0;
+  BLIGHT              = 1;
+  PEST_INFESTATION    = 2;
+  NUTRIENT_DEFICIENCY = 3;
+  FUNGAL_INFECTION    = 4;
+  VIRAL_INFECTION     = 5;
+  WATER_STRESS        = 6;
+  OTHER               = 99;   // model flagged something, but it doesn't fit the taxonomy
+}
+
+message DiagnosticData {
+  IssueType issue_type      = 1;     // constrained — what downstream logic branches on
+  string    raw_description = 2;   // unconstrained — what the model actually said, never discarded
+  float     confidence      = 3;
+  Severity  severity        = 4;
+}
+
+message FieldAction {
+  bool   trigger_actuator   = 1;
+  string actuator_id        = 2;
+  float  dosage_ml_per_sqm  = 3;
+  bool   isolation_required = 4;
+}
+
+message EdgeCommand {
+  string         source_node_id    = 1;
+  int64          timestamp_unix_ms = 2;
+  Status         status            = 3;
+  DiagnosticData diagnostic        = 4;
+  FieldAction    field_action      = 5;
+}

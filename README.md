@@ -178,3 +178,36 @@ uvicorn main:app --reload --port 8000
 ```bash
 python test_main.py
 ```
+
+---
+
+## 🔀 Versioning, Collaboration & Experimentation
+
+This repository follows standard software versioning and collaborative Git practices tailored for AI edge experimentation.
+
+### Branching Strategy
+
+- **`main`**: Production-ready, tested code and stable release tags (`vX.Y.Z`).
+- **`feature/<feature-name>`**: New diagnostic features, API endpoints, or hardware protocols.
+- **`experiment/<experiment-name>`**: Sandbox branches for testing new model parameters, prompt engineering, image preprocessing, or latency optimizations.
+
+### Quick Workflow for Experiments
+
+```bash
+# 1. Create an isolated experiment branch from main
+git checkout main
+git pull origin main
+git checkout -b experiment/vision-thresholds
+
+# 2. Develop and test your changes
+python compare.py
+
+# 3. Commit clean changes
+git add .
+git commit -m "feat: evaluate bicubic vs bilinear image scaling"
+
+# 4. Open a Pull Request on GitHub targeting main
+```
+
+For full details on semantic versioning, commit formats, and submitting Pull Requests, please consult [CONTRIBUTING.md](CONTRIBUTING.md).
+

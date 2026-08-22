@@ -1,0 +1,14 @@
+[project]
+name = "qwen-edge-agents"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn>=0.28.0",
+    "pydantic>=2.0.0",
+    "python-multipart>=0.0.9",
+    "dashscope>=1.26.0",
+    "protobuf>=5.26.0",
+    "python-dotenv>=1.0.0",
+    "requests>=2.31.0",
+]

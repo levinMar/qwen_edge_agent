@@ -1,0 +1,45 @@
+# Virtual Environments
+.venv/
+.venv-*/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment variables & secrets
+.env
+.env.*
+!.env.example
+
+# IDEs and Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Project specific exclusions
+To-Do's.md
+todo_answers.md
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+
+# Distribution / Packaging
+build/
+dist/
+*.egg-info/
