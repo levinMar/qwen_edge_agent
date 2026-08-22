@@ -13,23 +13,27 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x11\x64iagnostics.proto\x12\x12mirihi.diagnostics\"\xa0\x01\n\x0e\x44iagnosticData\x12\x31\n\nissue_type\x18\x01 \x01(\x0e\x32\x1d.mirihi.diagnostics.IssueType\x12\x17\n\x0fraw_description\x18\x02 \x01(\t\x12\x12\n\nconfidence\x18\x03 \x01(\x02\x12.\n\x08severity\x18\x04 \x01(\x0e\x32\x1c.mirihi.diagnostics.Severity\"s\n\x0b\x46ieldAction\x12\x18\n\x10trigger_actuator\x18\x01 \x01(\x08\x12\x13\n\x0b\x61\x63tuator_id\x18\x02 \x01(\t\x12\x19\n\x11\x64osage_ml_per_sqm\x18\x03 \x01(\x02\x12\x1a\n\x12isolation_required\x18\x04 \x01(\x08\"\xdb\x01\n\x0b\x45\x64geCommand\x12\x16\n\x0esource_node_id\x18\x01 \x01(\t\x12\x19\n\x11timestamp_unix_ms\x18\x02 \x01(\x03\x12*\n\x06status\x18\x03 \x01(\x0e\x32\x1a.mirihi.diagnostics.Status\x12\x36\n\ndiagnostic\x18\x04 \x01(\x0b\x32\".mirihi.diagnostics.DiagnosticData\x12\x35\n\x0c\x66ield_action\x18\x05 \x01(\x0b\x32\x1f.mirihi.diagnostics.FieldAction*8\n\x06Status\x12\x0b\n\x07UNKNOWN\x10\x00\x12\x0b\n\x07HEALTHY\x10\x01\x12\x14\n\x10\x41NOMALY_DETECTED\x10\x02*3\n\x08Severity\x12\x08\n\x04NONE\x10\x00\x12\x07\n\x03LOW\x10\x01\x12\n\n\x06MEDIUM\x10\x02\x12\x08\n\x04HIGH\x10\x03*\xa1\x01\n\tIssueType\x12\x11\n\rISSUE_UNKNOWN\x10\x00\x12\n\n\x06\x42LIGHT\x10\x01\x12\x14\n\x10PEST_INFESTATION\x10\x02\x12\x17\n\x13NUTRIENT_DEFICIENCY\x10\x03\x12\x14\n\x10\x46UNGAL_INFECTION\x10\x04\x12\x13\n\x0fVIRAL_INFECTION\x10\x05\x12\x10\n\x0cWATER_STRESS\x10\x06\x12\t\n\x05OTHER\x10\x63\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x11\x64iagnostics.proto\x12\x12mirihi.diagnostics\"P\n\x08Location\x12\x10\n\x08latitude\x18\x01 \x01(\x01\x12\x11\n\tlongitude\x18\x02 \x01(\x01\x12\x0f\n\x07zone_id\x18\x03 \x01(\t\x12\x0e\n\x06row_id\x18\x04 \x01(\x05\"\xa0\x01\n\x0e\x44iagnosticData\x12\x31\n\nissue_type\x18\x01 \x01(\x0e\x32\x1d.mirihi.diagnostics.IssueType\x12\x17\n\x0fraw_description\x18\x02 \x01(\t\x12\x12\n\nconfidence\x18\x03 \x01(\x02\x12.\n\x08severity\x18\x04 \x01(\x0e\x32\x1c.mirihi.diagnostics.Severity\"\xc7\x01\n\x0b\x46ieldAction\x12\x18\n\x10trigger_actuator\x18\x01 \x01(\x08\x12\x13\n\x0b\x61\x63tuator_id\x18\x02 \x01(\t\x12\x1a\n\x12treatment_chemical\x18\x03 \x01(\t\x12\x19\n\x11\x64osage_ml_per_sqm\x18\x04 \x01(\x02\x12\x1a\n\x12isolation_required\x18\x05 \x01(\x08\x12\x36\n\x0enozzle_setting\x18\x06 \x01(\x0e\x32\x1e.mirihi.diagnostics.NozzleType\"\x8b\x02\n\x0b\x45\x64geCommand\x12\x16\n\x0esource_node_id\x18\x01 \x01(\t\x12\x19\n\x11timestamp_unix_ms\x18\x02 \x01(\x03\x12*\n\x06status\x18\x03 \x01(\x0e\x32\x1a.mirihi.diagnostics.Status\x12\x36\n\ndiagnostic\x18\x04 \x01(\x0b\x32\".mirihi.diagnostics.DiagnosticData\x12\x35\n\x0c\x66ield_action\x18\x05 \x01(\x0b\x32\x1f.mirihi.diagnostics.FieldAction\x12.\n\x08location\x18\x06 \x01(\x0b\x32\x1c.mirihi.diagnostics.Location*8\n\x06Status\x12\x0b\n\x07UNKNOWN\x10\x00\x12\x0b\n\x07HEALTHY\x10\x01\x12\x14\n\x10\x41NOMALY_DETECTED\x10\x02*3\n\x08Severity\x12\x08\n\x04NONE\x10\x00\x12\x07\n\x03LOW\x10\x01\x12\n\n\x06MEDIUM\x10\x02\x12\x08\n\x04HIGH\x10\x03*\xa1\x01\n\tIssueType\x12\x11\n\rISSUE_UNKNOWN\x10\x00\x12\n\n\x06\x42LIGHT\x10\x01\x12\x14\n\x10PEST_INFESTATION\x10\x02\x12\x17\n\x13NUTRIENT_DEFICIENCY\x10\x03\x12\x14\n\x10\x46UNGAL_INFECTION\x10\x04\x12\x13\n\x0fVIRAL_INFECTION\x10\x05\x12\x10\n\x0cWATER_STRESS\x10\x06\x12\t\n\x05OTHER\x10\x63*K\n\nNozzleType\x12\x0e\n\nNOZZLE_OFF\x10\x00\x12\x08\n\x04MIST\x10\x01\x12\x10\n\x0cMEDIUM_SPRAY\x10\x02\x12\x11\n\rHIGH_PRESSURE\x10\x03\x62\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'diagnostics_pb2', globals())
 if _descriptor._USE_C_DESCRIPTORS == False:
 
   DESCRIPTOR._options = None
-  _STATUS._serialized_start=543
-  _STATUS._serialized_end=599
-  _SEVERITY._serialized_start=601
-  _SEVERITY._serialized_end=652
-  _ISSUETYPE._serialized_start=655
-  _ISSUETYPE._serialized_end=816
-  _DIAGNOSTICDATA._serialized_start=42
-  _DIAGNOSTICDATA._serialized_end=202
-  _FIELDACTION._serialized_start=204
-  _FIELDACTION._serialized_end=319
-  _EDGECOMMAND._serialized_start=322
-  _EDGECOMMAND._serialized_end=541
+  _STATUS._serialized_start=758
+  _STATUS._serialized_end=814
+  _SEVERITY._serialized_start=816
+  _SEVERITY._serialized_end=867
+  _ISSUETYPE._serialized_start=870
+  _ISSUETYPE._serialized_end=1031
+  _NOZZLETYPE._serialized_start=1033
+  _NOZZLETYPE._serialized_end=1108
+  _LOCATION._serialized_start=41
+  _LOCATION._serialized_end=121
+  _DIAGNOSTICDATA._serialized_start=124
+  _DIAGNOSTICDATA._serialized_end=284
+  _FIELDACTION._serialized_start=287
+  _FIELDACTION._serialized_end=486
+  _EDGECOMMAND._serialized_start=489
+  _EDGECOMMAND._serialized_end=756
 # @@protoc_insertion_point(module_scope)

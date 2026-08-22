@@ -8,7 +8,7 @@ enum Status {
 }
 
 enum Severity {
-  NONE   = 0; 
+  NONE   = 0;
   LOW    = 1;
   MEDIUM = 2;
   HIGH   = 3;
@@ -25,18 +25,34 @@ enum IssueType {
   OTHER               = 99;   // model flagged something, but it doesn't fit the taxonomy
 }
 
+enum NozzleType {
+  NOZZLE_OFF    = 0;
+  MIST          = 1;
+  MEDIUM_SPRAY  = 2;
+  HIGH_PRESSURE = 3;
+}
+
+message Location {
+  double latitude   = 1;
+  double longitude  = 2;
+  string zone_id    = 3;   // e.g. "ZONE-B4"
+  int32  row_id     = 4;   // e.g. Row 12
+}
+
 message DiagnosticData {
-  IssueType issue_type      = 1;     // constrained — what downstream logic branches on
+  IssueType issue_type      = 1;   // constrained — what downstream logic branches on
   string    raw_description = 2;   // unconstrained — what the model actually said, never discarded
   float     confidence      = 3;
   Severity  severity        = 4;
 }
 
 message FieldAction {
-  bool   trigger_actuator   = 1;
-  string actuator_id        = 2;
-  float  dosage_ml_per_sqm  = 3;
-  bool   isolation_required = 4;
+  bool       trigger_actuator   = 1;
+  string     actuator_id        = 2;
+  string     treatment_chemical = 3;   // e.g. "Fungicide_CopperMax", "Liquid_NPK_10-10-10"
+  float      dosage_ml_per_sqm  = 4;
+  bool       isolation_required = 5;
+  NozzleType nozzle_setting     = 6;
 }
 
 message EdgeCommand {
@@ -45,4 +61,5 @@ message EdgeCommand {
   Status         status            = 3;
   DiagnosticData diagnostic        = 4;
   FieldAction    field_action      = 5;
+  Location       location          = 6;   // Physical farm coordinates where visual was captured
 }

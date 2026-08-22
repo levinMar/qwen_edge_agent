@@ -5,6 +5,8 @@ Exposes edge inference endpoints over HTTP:
   - GET /health           — Health check and edge node metadata
   - POST /diagnose        — Run single strategy classification (constrained vs freeform)
   - POST /compare         — Run both strategies side-by-side and report agreement
+  - POST /dispatch        — Full hardware dispatch: runs diagnosis, evaluates actuation rules,
+                            packages location-aware EdgeCommand Protobuf, and dispatches to spraying bot.
 
 Responses wrap diagnostic inference outputs in the top-level EdgeCommand
 protobuf message (diagnostics.proto), returning serialized JSON.
@@ -24,60 +26,61 @@ from diagnostics_pb2 import (
     IssueType,
     DiagnosticData,
     FieldAction,
+    Location,
 )
 from inference import constrained_diagnose, freeform_diagnose
+from actuator_rules import determine_field_action
+from simulated_sprayer_bot import SimulatedSprayerBot
 
 app = FastAPI(
     title="MiRIHI Qwen-VL Edge Diagnostic Agent",
-    description="Edge crop diagnostic inference pipeline with protobuf command wrapping.",
+    description="Edge crop diagnostic inference pipeline with protobuf command wrapping & hardware actuation dispatch.",
     version="0.1.0",
 )
 
+bot_simulator = SimulatedSprayerBot()
+
 
 def build_edge_command(
-    diagnostic: DiagnosticData, source_node_id: str = "edge-node-01"
+    diagnostic: DiagnosticData,
+    source_node_id: str = "edge-node-01",
+    latitude: float = 0.0,
+    longitude: float = 0.0,
+    zone_id: str = "",
+    row_id: int = 0,
 ) -> EdgeCommand:
     """
-    Wraps DiagnosticData into a full EdgeCommand protobuf message, computing
-    overall Status and actuation FieldAction rules.
+    Wraps DiagnosticData into a full EdgeCommand protobuf message, attaching location metadata
+    and computing hardware actuation FieldAction using the actuator rules engine.
     """
     cmd = EdgeCommand()
     cmd.source_node_id = source_node_id
     cmd.timestamp_unix_ms = int(time.time() * 1000)
 
+    # Attach location metadata
+    cmd.location.latitude = latitude
+    cmd.location.longitude = longitude
+    cmd.location.zone_id = zone_id
+    cmd.location.row_id = row_id
+
     cmd.diagnostic.CopyFrom(diagnostic)
 
-    # Determine status & actuator response logic
+    # Determine status & hardware action rules
     if (
         diagnostic.severity == Severity.NONE
-        or diagnostic.issue_type == IssueType.OTHER
         or diagnostic.issue_type == IssueType.ISSUE_UNKNOWN
     ):
         cmd.status = Status.HEALTHY
-        cmd.field_action.trigger_actuator = False
-        cmd.field_action.isolation_required = False
-        cmd.field_action.dosage_ml_per_sqm = 0.0
+        field_action = determine_field_action(
+            diagnostic.issue_type, Severity.NONE
+        )
     else:
         cmd.status = Status.ANOMALY_DETECTED
-        cmd.field_action.trigger_actuator = True
+        field_action = determine_field_action(
+            diagnostic.issue_type, diagnostic.severity
+        )
 
-        # Contagious issues require isolation if medium or high severity
-        if (
-            diagnostic.issue_type in (IssueType.BLIGHT, IssueType.FUNGAL_INFECTION)
-            and diagnostic.severity in (Severity.MEDIUM, Severity.HIGH)
-        ):
-            cmd.field_action.isolation_required = True
-        else:
-            cmd.field_action.isolation_required = False
-
-        # Dosage rule based on severity
-        if diagnostic.severity == Severity.HIGH:
-            cmd.field_action.dosage_ml_per_sqm = 15.0
-        elif diagnostic.severity == Severity.MEDIUM:
-            cmd.field_action.dosage_ml_per_sqm = 10.0
-        else:
-            cmd.field_action.dosage_ml_per_sqm = 5.0
-
+    cmd.field_action.CopyFrom(field_action)
     return cmd
 
 
@@ -178,6 +181,56 @@ async def compare_strategies(
             "freeform": MessageToDict(
                 freeform_cmd, preserving_proto_field_name=True
             ),
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if is_temp and os.path.exists(target_path):
+            os.remove(target_path)
+
+
+@app.post("/dispatch")
+async def dispatch_hardware_action(
+    latitude: float = Form(0.0, description="Scout GPS latitude"),
+    longitude: float = Form(0.0, description="Scout GPS longitude"),
+    zone_id: str = Form("ZONE-A1", description="Farm zone identifier"),
+    row_id: int = Form(1, description="Farm row number"),
+    strategy: Literal["constrained", "freeform"] = Form("constrained"),
+    file: Optional[UploadFile] = File(None),
+    image_path: Optional[str] = Form(None),
+):
+    """
+    Full Hardware Dispatch Workflow:
+    1. Receives crop leaf image + farm location coordinates from scouting agrover.
+    2. Runs Qwen AI diagnostic inference.
+    3. Evaluates hardware actuation rules (chemical selection, dosage ml/m², nozzle pressure).
+    4. Encodes location-aware EdgeCommand Protobuf message.
+    5. Dispatches command to spraying bot hardware simulator.
+    """
+    target_path, is_temp = _resolve_image_file(file, image_path)
+
+    try:
+        if strategy == "constrained":
+            diagnostic = constrained_diagnose(target_path)
+        else:
+            diagnostic = freeform_diagnose(target_path)
+
+        edge_cmd = build_edge_command(
+            diagnostic=diagnostic,
+            source_node_id="scout-agrover-01",
+            latitude=latitude,
+            longitude=longitude,
+            zone_id=zone_id,
+            row_id=row_id,
+        )
+
+        # Dispatch command to spraying bot simulator
+        bot_response = bot_simulator.execute_command(edge_cmd)
+
+        return {
+            "edge_command": MessageToDict(edge_cmd, preserving_proto_field_name=True),
+            "hardware_execution": bot_response,
         }
 
     except Exception as e:

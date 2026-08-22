@@ -71,13 +71,15 @@ A primary architectural highlight of this system is its **Dual-Strategy Pipeline
 
 ```
 qwen_edge_agents/
-├── diagnostics.proto     # Protobuf schema defining DiagnosticData, FieldAction, EdgeCommand
-├── diagnostics_pb2.py    # Compiled Python Protocol Buffer bindings
-├── inference.py          # Dual-strategy inference engine calling Qwen3.8-Max multimodal API
-├── main.py               # FastAPI microservice wrapper providing /diagnose and /compare
-├── compare.py            # Side-by-side strategy benchmark & agreement reporting script
-├── test_main.py          # Unit test suite verifying FastAPI endpoints & command generation
-└── test_images/          # Sample leaf dataset for edge testing
+├── diagnostics.proto       # Protobuf schema defining Location, DiagnosticData, FieldAction, EdgeCommand
+├── diagnostics_pb2.py      # Compiled Python Protocol Buffer bindings
+├── inference.py            # Dual-strategy inference engine calling Qwen3.8-Max multimodal API
+├── actuator_rules.py       # Hardware actuation rules engine mapping (IssueType, Severity) to chemical/dosage/nozzles
+├── simulated_sprayer_bot.py# Hardware simulation bot receiving location-aware Protobuf & triggering relays
+├── main.py                 # FastAPI microservice wrapper providing /diagnose, /compare, and /dispatch
+├── compare.py              # Side-by-side strategy benchmark & agreement reporting script
+├── test_main.py            # Unit test suite verifying endpoints, rules engine, and hardware dispatch
+└── test_images/            # Sample leaf dataset for edge testing
 ```
 
 ---
@@ -90,57 +92,24 @@ Returns node status and system metadata.
 ### 2. `POST /diagnose`
 Runs single-strategy inference on an uploaded image file or local image path.
 * **Query Params**: `strategy=constrained` or `strategy=freeform`
-* **Response**: Serialized `EdgeCommand` Protobuf JSON containing `DiagnosticData` and computed `FieldAction` (dosage, isolation requirements, actuator triggers).
+* **Response**: Serialized `EdgeCommand` Protobuf JSON containing `DiagnosticData` and computed `FieldAction`.
 
 ### 3. `POST /compare`
 Runs **both** strategies side-by-side against the same image and reports agreement.
 
-**Example Response**:
-```json
-{
-  "agreement": true,
-  "constrained": {
-    "source_node_id": "edge-node-01",
-    "status": "ANOMALY_DETECTED",
-    "diagnostic": {
-      "issue_type": "FUNGAL_INFECTION",
-      "severity": "HIGH",
-      "confidence": 0.92,
-      "raw_description": "Severe fungal leaf spot observed."
-    },
-    "field_action": {
-      "trigger_actuator": true,
-      "dosage_ml_per_sqm": 15.0,
-      "isolation_required": true
-    }
-  },
-  "freeform": {
-    "source_node_id": "edge-node-01",
-    "status": "ANOMALY_DETECTED",
-    "diagnostic": {
-      "issue_type": "FUNGAL_INFECTION",
-      "severity": "HIGH",
-      "confidence": 0.85,
-      "raw_description": "The leaf exhibits dense white powdery mildew with high severity (~85% confidence)."
-    },
-    "field_action": {
-      "trigger_actuator": true,
-      "dosage_ml_per_sqm": 15.0,
-      "isolation_required": true
-    }
-  }
-}
-```
+### 4. `POST /dispatch` (Full Hardware Execution)
+Receives image + scout agrover GPS location metadata (`latitude`, `longitude`, `zone_id`, `row_id`), runs Qwen AI diagnosis, evaluates chemical/dosage actuation rules, packages location-aware Protobuf, and dispatches to the spraying bot.
 
 ---
 
 ## 🤖 Hardware Integration Flow
 
 ```
-ESP32-CAM (Sensor Node) ───> Raspberry Pi SBC (Edge AI Brain) ───> ESP32-S3 Rover (Actuator Node)
-Captures Crop JPEGs          Runs FastAPI + Qwen3.8-Max            Executes PID Navigation
-POSTs to /diagnose           Encodes EdgeCommand Proto             Controls Motors & Sprayers
+ESP32-CAM (Scout Agrover) ───> Raspberry Pi (AI Edge Brain) ───> ESP32-S3 / ROS 2 (Spraying Bot)
+Captures Leaf JPEG + GPS      Runs Qwen-VL + Actuator Rules       Receives Protobuf EdgeCommand
+POSTs to /dispatch            Encodes Location-Aware Proto        Navigates Zone & Activates Pump Relays
 ```
+
 
 ---
 
