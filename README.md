@@ -10,60 +10,35 @@
 
 ---
 
-## 🔬 Core Feature: Dual Classification Strategies
+## 🔬 Core Design: Constrained Taxonomy Classification
 
-A primary architectural highlight of this system is its **Dual-Strategy Pipeline** implemented in [`inference.py`](file:///c:/Users/Administrator/Desktop/qwen_edge_agents/inference.py). It addresses a fundamental design tension in deploying LLMs/VLMs for real-time edge control: **tight structured coupling vs. raw model expressiveness**.
+The inference pipeline is implemented in [`inference.py`](file:///c:/Users/Administrator/Desktop/qwen_edge_agents/inference.py). It prompts **Qwen3.8-Max** to select directly from a fixed closed taxonomy of `IssueType` enum values and return strict JSON — keeping the output tightly coupled to downstream protobuf parsing with zero ambiguity.
 
 ```
                            ┌───────────────────────────────┐
                            │      Crop Leaf Image          │
                            └───────────────┬───────────────┘
                                            │
-                    ┌──────────────────────┴──────────────────────┐
-                    ▼                                             ▼
-       ┌─────────────────────────┐                   ┌─────────────────────────┐
-       │   Strategy 1:           │                   │   Strategy 2:           │
-       │   Constrained Prompt    │                   │   Unrestricted /        │
-       │   (JSON Taxonomy)       │                   │   Free-Form Prompt      │
-       └────────────┬────────────┘                   └────────────┬────────────┘
-                    │                                             │
-                    ▼                                             ▼
-       Strict JSON Enum Output                       Natural Language Description
-       "issue_type": "BLIGHT"                         "Yellow spots and fungal mold"
-                    │                                             │
-                    │                                             ▼
-                    │                                Keyword Matching & Extraction
-                    │                                issue_type: FUNGAL_INFECTION
-                    │                                             │
-                    └──────────────────────┬──────────────────────┘
-                                           ▼
-                               ┌───────────────────────┐
-                               │    DiagnosticData     │
-                               │   Protobuf Message    │
-                               └───────────────────────┘
+                              ┌────────────▼────────────┐
+                              │   Constrained Prompt    │
+                              │   (JSON Taxonomy)       │
+                              └────────────┬────────────┘
+                                           │
+                              Strict JSON Enum Output
+                              {"issue_type": "BLIGHT",
+                               "severity": "HIGH",
+                               "confidence": 0.92, ...}
+                                           │
+                              ┌────────────▼────────────┐
+                              │    DiagnosticData       │
+                              │   Protobuf Message      │
+                              └─────────────────────────┘
 ```
 
-### Strategy 1: Constrained Taxonomy (`constrained_diagnose`)
-* **How it works**: Prompts Qwen3.8-Max to select strictly from a pre-defined closed taxonomy of `IssueType` enum values (`BLIGHT`, `PEST_INFESTATION`, `NUTRIENT_DEFICIENCY`, `FUNGAL_INFECTION`, `VIRAL_INFECTION`, `WATER_STRESS`, `OTHER`) and return a raw JSON object.
-* **Pros**: Zero post-processing needed, low latency, tight integration with downstream enum logic, zero mapping ambiguity.
-* **Cons**: Risk of JSON parsing failures if the model hallucinates non-JSON syntax or unlisted keys.
-
-### Strategy 2: Unrestricted / Free-Form (`freeform_diagnose`)
-* **How it works**: Prompts Qwen3.8-Max for a natural, unconstrained visual description, estimated severity, and confidence percentage. Uses post-hoc keyword extraction and regex pattern matching to map the raw response back into the closed `IssueType` enum.
-* **Pros**: Highly robust against model phrasing drift, preserves the raw, unedited model reasoning in `raw_description`, catches visual nuances that rigid enums miss.
-* **Cons**: Requires heuristic post-processing (keyword maps, regex extraction) which can misclassify ambiguous descriptions.
-
----
-
-### ⚔️ Performance & Output Comparison
-
-| Metric / Aspect | Strategy 1: Constrained | Strategy 2: Unrestricted / Free-Form |
-| :--- | :--- | :--- |
-| **Output Format** | Rigid JSON (`{"issue_type": "BLIGHT", ...}`) | Natural Prose ("The leaf shows signs of fungal mold with high severity...") |
-| **Downstream Parsing** | Direct JSON deserialization into Proto | Keyword matching + Regex extraction for confidence/severity |
-| **Drift Resistance** | High dependency on strict JSON adherence | High resilience to model updates and natural language variations |
-| **Context Preservation** | Summarized into single key-value strings | Full explanatory reasoning preserved in `raw_description` |
-| **Real-world Use Case** | Fast automated actuation (e.g. spray triggers) | Detailed telemetry logging, human operator audit, fallback validation |
+### Constrained Taxonomy (`constrained_diagnose`)
+* **How it works**: Prompts Qwen3.8-Max to pick from `BLIGHT`, `PEST_INFESTATION`, `NUTRIENT_DEFICIENCY`, `FUNGAL_INFECTION`, `VIRAL_INFECTION`, `WATER_STRESS`, or `HEALTHY` and return a JSON object with `issue_type`, `severity`, `confidence`, and `description`.
+* **Why constrained**: Zero post-processing needed, direct JSON deserialization into proto, no keyword mapping ambiguity — safe for real-time hardware actuation triggers.
+* **Resilience**: The parser strips markdown code fences (` ```json `) so the model never breaks parsing even when it wraps its output.
 
 ---
 
@@ -71,14 +46,14 @@ A primary architectural highlight of this system is its **Dual-Strategy Pipeline
 
 ```
 qwen_edge_agents/
-├── diagnostics.proto       # Protobuf schema defining Location, DiagnosticData, FieldAction, EdgeCommand
+├── diagnostics.proto       # Protobuf schema: Location, DiagnosticData, FieldAction, EdgeCommand
 ├── diagnostics_pb2.py      # Compiled Python Protocol Buffer bindings
-├── inference.py            # Dual-strategy inference engine calling Qwen3.8-Max multimodal API
-├── actuator_rules.py       # Hardware actuation rules engine mapping (IssueType, Severity) to chemical/dosage/nozzles
-├── simulated_sprayer_bot.py# Hardware simulation bot receiving location-aware Protobuf & triggering relays
-├── main.py                 # FastAPI microservice wrapper providing /diagnose, /compare, and /dispatch
-├── compare.py              # Side-by-side strategy benchmark & agreement reporting script
-├── test_main.py            # Unit test suite verifying endpoints, rules engine, and hardware dispatch
+├── inference.py            # Constrained inference engine calling Qwen3.8-Max multimodal API
+├── actuator_rules.py       # Rules engine mapping (IssueType, Severity) → chemical/dosage/nozzle
+├── simulated_sprayer_bot.py# Hardware simulation bot receiving location-aware Protobuf EdgeCommands
+├── main.py                 # FastAPI microservice: /health, /diagnose, /dispatch
+├── compare.py              # Constrained inference batch test runner across image set
+├── test_main.py            # Unit test suite: endpoints, rules engine, hardware dispatch
 └── test_images/            # Sample leaf dataset for edge testing
 ```
 
@@ -90,23 +65,20 @@ qwen_edge_agents/
 Returns node status and system metadata.
 
 ### 2. `POST /diagnose`
-Runs single-strategy inference on an uploaded image file or local image path.
-* **Query Params**: `strategy=constrained` or `strategy=freeform`
+Runs constrained taxonomy inference on an uploaded image file or local image path.
+* **Body**: `file` (multipart upload) or `image_path` (form string)
 * **Response**: Serialized `EdgeCommand` Protobuf JSON containing `DiagnosticData` and computed `FieldAction`.
 
-### 3. `POST /compare`
-Runs **both** strategies side-by-side against the same image and reports agreement.
+### 3. `POST /dispatch` (Full Hardware Execution)
+Receives image + scout agrover GPS location metadata (`latitude`, `longitude`, `zone_id`, `row_id`), runs Qwen3.8-Max diagnosis, evaluates chemical/dosage actuation rules, packages location-aware Protobuf, and dispatches to the spraying bot.
 
-### 4. `POST /dispatch` (Full Hardware Execution)
-Receives image + scout agrover GPS location metadata (`latitude`, `longitude`, `zone_id`, `row_id`), runs Qwen AI diagnosis, evaluates chemical/dosage actuation rules, packages location-aware Protobuf, and dispatches to the spraying bot.
 
----
 
 ## 🤖 Hardware Integration Flow
 
 ```
 ESP32-CAM (Scout Agrover) ───> Raspberry Pi (AI Edge Brain) ───> ESP32-S3 / ROS 2 (Spraying Bot)
-Captures Leaf JPEG + GPS      Runs Qwen-VL + Actuator Rules       Receives Protobuf EdgeCommand
+Captures Leaf JPEG + GPS      Runs Qwen3.8-Max + Actuator Rules  Receives Protobuf EdgeCommand
 POSTs to /dispatch            Encodes Location-Aware Proto        Navigates Zone & Activates Pump Relays
 ```
 

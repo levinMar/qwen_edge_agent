@@ -29,8 +29,8 @@ class DynamicObstacleReplanner:
         center_gx, center_gy = self.world_to_grid(obstacle_x, obstacle_y)
         grid_radius = int(round(radius_meters / self.resolution))
 
-        print(f"\n🚨 [SENSOR DETECT] Dynamic Obstacle Discovered at ({obstacle_x:.1f}m, {obstacle_y:.1f}m)!")
-        print(f"🗺️ Updating Local Costmap (Inflating lethal obstacle zone within {radius_meters}m radius)...")
+        print(f"\n[SENSOR DETECT] Dynamic Obstacle Discovered at ({obstacle_x:.1f}m, {obstacle_y:.1f}m)!")
+        print(f"[COSTMAP] Updating Local Costmap (Inflating lethal obstacle zone within {radius_meters}m radius)...")
 
         for dx in range(-grid_radius, grid_radius + 1):
             for dy in range(-grid_radius, grid_radius + 1):
@@ -54,14 +54,14 @@ class DynamicObstacleReplanner:
 
             # Check if straight path hits a lethal costmap obstacle
             if self.local_costmap.get(grid_pos, 0) == 254:
-                print(f"⚠️  [LOCAL PLANNER] Straight path blocked at ({interp_x:.1f}m, {interp_y:.1f}m)!")
-                print(f"↪️  [DYNAMIC REPLAN] Calculating detoured local trajectory around obstacle...")
+                print(f"[LOCAL PLANNER] Straight path blocked at ({interp_x:.1f}m, {interp_y:.1f}m)!")
+                print(f"[DYNAMIC REPLAN] Calculating detoured local trajectory around obstacle...")
 
                 # Compute detoured waypoint (offset perpendicular to goal direction)
                 detour_x = interp_x - 0.8
                 detour_y = interp_y + 0.8
                 path.append((round(detour_x, 2), round(detour_y, 2)))
-                print(f"📍 Detour Waypoint Generated: ({detour_x:.1f}m, {detour_y:.1f}m)")
+                print(f"[DETOUR] Waypoint Generated: ({detour_x:.1f}m, {detour_y:.1f}m)")
 
             path.append((round(interp_x, 2), round(interp_y, 2)))
 
@@ -73,19 +73,19 @@ def simulate_rover_patrol_with_obstacle():
     Demonstrates an agrover encountering a misplaced jembe on its path to Zone B-4.
     """
     print("=" * 65)
-    print("🚜 AGROVER DYNAMIC OBSTACLE REPLANNING SIMULATION")
+    print("AGROVER DYNAMIC OBSTACLE REPLANNING SIMULATION")
     print("=" * 65)
 
     start = (0.0, 0.0)
     target_destination = (10.0, 10.0)  # Zone B-4, Row 12 target
 
-    print(f"🏁 Starting Patrol from Base: {start}")
-    print(f"🎯 Target Destination (Qwen AI Command): Zone B-4 {target_destination}")
+    print(f"Starting Patrol from Base: {start}")
+    print(f"Target Destination (Qwen AI Command): Zone B-4 {target_destination}")
 
     replanner = DynamicObstacleReplanner()
 
     # Rover starts moving...
-    print("\n▶️ Rover underway towards Zone B-4 (Speed: 0.5 m/s)...")
+    print("\nRover underway towards Zone B-4 (Speed: 0.5 m/s)...")
     time.sleep(0.05)
 
     # Unexpected event: Misplaced jembe at (5.0m, 5.0m)
@@ -95,11 +95,11 @@ def simulate_rover_patrol_with_obstacle():
     # Compute dynamic path
     path = replanner.plan_path(start, target_destination)
 
-    print("\n✅ [REPLAN SUCCESS] New Waypoint Trajectory Generated:")
+    print("\n[REPLAN SUCCESS] New Waypoint Trajectory Generated:")
     for idx, pt in enumerate(path):
         print(f"  Step {idx+1}: {pt}")
 
-    print("\n🎉 Rover successfully bypassed the misplaced jembe and reached target Zone B-4!")
+    print("\nRover successfully bypassed the misplaced jembe and reached target Zone B-4!")
     print("=" * 65)
 
 

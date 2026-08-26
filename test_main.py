@@ -77,7 +77,6 @@ class TestMainApi(unittest.TestCase):
                 "longitude": 36.817223,
                 "zone_id": "ZONE-B4",
                 "row_id": 12,
-                "strategy": "constrained",
             },
         )
         self.assertEqual(response.status_code, 200)

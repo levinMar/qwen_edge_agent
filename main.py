@@ -1,10 +1,9 @@
 """
-main.py — FastAPI wrapper for the MiRIHI Qwen-VL Edge Diagnostic Agent.
+main.py — FastAPI wrapper for the MiRIHI Qwen3.8-Max Edge Diagnostic Agent.
 
 Exposes edge inference endpoints over HTTP:
   - GET /health           — Health check and edge node metadata
-  - POST /diagnose        — Run single strategy classification (constrained vs freeform)
-  - POST /compare         — Run both strategies side-by-side and report agreement
+  - POST /diagnose        — Run constrained taxonomy classification on a leaf image
   - POST /dispatch        — Full hardware dispatch: runs diagnosis, evaluates actuation rules,
                             packages location-aware EdgeCommand Protobuf, and dispatches to spraying bot.
 
@@ -15,8 +14,8 @@ protobuf message (diagnostics.proto), returning serialized JSON.
 import os
 import time
 import tempfile
-from typing import Optional, Literal
-from fastapi import FastAPI, File, UploadFile, Form, Query, HTTPException
+from typing import Optional
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from google.protobuf.json_format import MessageToDict
 
 from diagnostics_pb2 import (
@@ -28,12 +27,12 @@ from diagnostics_pb2 import (
     FieldAction,
     Location,
 )
-from inference import constrained_diagnose, freeform_diagnose
+from inference import constrained_diagnose
 from actuator_rules import determine_field_action
 from simulated_sprayer_bot import SimulatedSprayerBot
 
 app = FastAPI(
-    title="MiRIHI Qwen-VL Edge Diagnostic Agent",
+    title="MiRIHI Qwen3.8-Max Edge Diagnostic Agent",
     description="Edge crop diagnostic inference pipeline with protobuf command wrapping & hardware actuation dispatch.",
     version="0.1.0",
 )
@@ -117,7 +116,7 @@ def health_check():
     """Health check and node status metadata."""
     return {
         "status": "online",
-        "service": "MiRIHI Qwen-VL Edge Diagnostic Agent",
+        "service": "MiRIHI Qwen3.8-Max Edge Diagnostic Agent",
         "node_id": "edge-node-01",
         "timestamp": int(time.time()),
     }
@@ -125,63 +124,19 @@ def health_check():
 
 @app.post("/diagnose")
 async def diagnose(
-    strategy: Literal["constrained", "freeform"] = Query(
-        "constrained", description="Classification strategy to use"
-    ),
     file: Optional[UploadFile] = File(None),
     image_path: Optional[str] = Form(None),
 ):
     """
-    Run diagnostic inference on a leaf image using the specified strategy.
+    Run constrained taxonomy diagnostic inference on a leaf image.
     Returns serialized EdgeCommand protobuf.
     """
     target_path, is_temp = _resolve_image_file(file, image_path)
 
     try:
-        if strategy == "constrained":
-            diagnostic = constrained_diagnose(target_path)
-        else:
-            diagnostic = freeform_diagnose(target_path)
-
+        diagnostic = constrained_diagnose(target_path)
         edge_cmd = build_edge_command(diagnostic)
         return MessageToDict(edge_cmd, preserving_proto_field_name=True)
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        if is_temp and os.path.exists(target_path):
-            os.remove(target_path)
-
-
-@app.post("/compare")
-async def compare_strategies(
-    file: Optional[UploadFile] = File(None),
-    image_path: Optional[str] = Form(None),
-):
-    """
-    Run both constrained and freeform classification strategies side-by-side
-    against the target leaf image and report agreement.
-    """
-    target_path, is_temp = _resolve_image_file(file, image_path)
-
-    try:
-        constrained_diag = constrained_diagnose(target_path)
-        freeform_diag = freeform_diagnose(target_path)
-
-        constrained_cmd = build_edge_command(constrained_diag)
-        freeform_cmd = build_edge_command(freeform_diag)
-
-        agree = constrained_diag.issue_type == freeform_diag.issue_type
-
-        return {
-            "agreement": agree,
-            "constrained": MessageToDict(
-                constrained_cmd, preserving_proto_field_name=True
-            ),
-            "freeform": MessageToDict(
-                freeform_cmd, preserving_proto_field_name=True
-            ),
-        }
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -196,14 +151,13 @@ async def dispatch_hardware_action(
     longitude: float = Form(0.0, description="Scout GPS longitude"),
     zone_id: str = Form("ZONE-A1", description="Farm zone identifier"),
     row_id: int = Form(1, description="Farm row number"),
-    strategy: Literal["constrained", "freeform"] = Form("constrained"),
     file: Optional[UploadFile] = File(None),
     image_path: Optional[str] = Form(None),
 ):
     """
     Full Hardware Dispatch Workflow:
     1. Receives crop leaf image + farm location coordinates from scouting agrover.
-    2. Runs Qwen AI diagnostic inference.
+    2. Runs Qwen3.8-Max constrained diagnostic inference.
     3. Evaluates hardware actuation rules (chemical selection, dosage ml/m², nozzle pressure).
     4. Encodes location-aware EdgeCommand Protobuf message.
     5. Dispatches command to spraying bot hardware simulator.
@@ -211,10 +165,7 @@ async def dispatch_hardware_action(
     target_path, is_temp = _resolve_image_file(file, image_path)
 
     try:
-        if strategy == "constrained":
-            diagnostic = constrained_diagnose(target_path)
-        else:
-            diagnostic = freeform_diagnose(target_path)
+        diagnostic = constrained_diagnose(target_path)
 
         edge_cmd = build_edge_command(
             diagnostic=diagnostic,

@@ -27,13 +27,13 @@ class SimulatedSprayerBot:
 
         # 1. Navigation Phase
         target_zone = loc.zone_id if loc.zone_id else f"GPS({loc.latitude:.4f}, {loc.longitude:.4f})"
-        print(f"\n🤖 [{self.bot_id}] RECEIVING COMMAND from node '{edge_command_proto.source_node_id}'...")
-        print(f"📍 NAVIGATING to target location: Zone '{target_zone}', Row {loc.row_id} (Lat: {loc.latitude}, Lon: {loc.longitude})")
+        print(f"\n[ROBOT] [{self.bot_id}] RECEIVING COMMAND from node '{edge_command_proto.source_node_id}'...")
+        print(f"[NAV] NAVIGATING to target location: Zone '{target_zone}', Row {loc.row_id} (Lat: {loc.latitude}, Lon: {loc.longitude})")
         self.current_zone = target_zone
 
         # 2. Actuation Decision
         if not action.trigger_actuator:
-            print(f"✅ [{self.bot_id}] Target area is HEALTHY or NO ACTION REQUIRED. Standby.")
+            print(f"[STANDBY] [{self.bot_id}] Target area is HEALTHY or NO ACTION REQUIRED. Standby.")
             return {
                 "bot_id": self.bot_id,
                 "status": "STANDBY",
@@ -46,16 +46,16 @@ class SimulatedSprayerBot:
         issue_name = diagnostics_pb2.IssueType.Name(diag.issue_type)
         severity_name = diagnostics_pb2.Severity.Name(diag.severity)
 
-        print(f"⚠️  [{self.bot_id}] ANOMALY CONFIRMED: {issue_name} (Severity: {severity_name})")
-        print(f"🧪 PUMP RELAY ON: Chemical = '{action.treatment_chemical}' | Dosage = {action.dosage_ml_per_sqm} ml/m² | Nozzle = {nozzle_name}")
+        print(f"[ALERT] [{self.bot_id}] ANOMALY CONFIRMED: {issue_name} (Severity: {severity_name})")
+        print(f"[RELAY] PUMP RELAY ON: Chemical = '{action.treatment_chemical}' | Dosage = {action.dosage_ml_per_sqm} ml/m² | Nozzle = {nozzle_name}")
         if action.isolation_required:
-            print(f"🚨 ISOLATION ALERT: Marking Zone '{self.current_zone}' for quarantine.")
+            print(f"[QUARANTINE] ISOLATION ALERT: Marking Zone '{self.current_zone}' for quarantine.")
 
         self.pump_active = True
         time.sleep(0.05)  # Simulate relay execution pulse
         self.pump_active = False
 
-        print(f"✨ [{self.bot_id}] ACTUATION COMPLETE. Returning to standby.\n")
+        print(f"[SUCCESS] [{self.bot_id}] ACTUATION COMPLETE. Returning to standby.\n")
 
         return {
             "bot_id": self.bot_id,
